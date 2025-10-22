@@ -2,6 +2,52 @@
 
 use Illuminate\Support\Str;
 
+$shardCount = (int) env('DB_SHARD_COUNT', 0);
+$shardConnections = [];
+$shardDriver = env('DB_SHARD_DRIVER', env('DB_CONNECTION', 'sqlite'));
+
+for ($i = 0; $i < $shardCount; $i++) {
+    $prefix = "DB_SHARD_{$i}_";
+
+    if ($shardDriver === 'sqlite') {
+        // each sqlite shard uses a separate file; default path if not provided
+        $dbPath = env($prefix . 'DATABASE', database_path("database_shard_{$i}.sqlite"));
+        $shardConnections["sqlite_shard_{$i}"] = [
+            'driver' => 'sqlite',
+            'url' => env('DB_URL'),
+            'database' => $dbPath,
+            'prefix' => '',
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+        ];
+    } elseif ($shardDriver === 'pgsql') {
+        $shardConnections["pgsql_shard_{$i}"] = [
+            'driver' => 'pgsql',
+            'url' => env('DB_URL'),
+            'host' => env($prefix . 'HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env($prefix . 'PORT', env('DB_PORT', '5432')),
+            'database' => env($prefix . 'DATABASE', env('DB_DATABASE', 'laravel')),
+            'username' => env($prefix . 'USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env($prefix . 'PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env($prefix . 'SEARCH_PATH', 'public'),
+            'sslmode' => env($prefix . 'SSLMODE', 'prefer'),
+        ];
+    } else {
+        // generic fallback
+        $shardConnections["{$shardDriver}_shard_{$i}"] = [
+            'driver' => $shardDriver,
+            'url' => env('DB_URL'),
+            'host' => env($prefix . 'HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env($prefix . 'PORT', env('DB_PORT', '5432')),
+            'database' => env($prefix . 'DATABASE', env('DB_DATABASE', 'laravel')),
+            'username' => env($prefix . 'USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env($prefix . 'PASSWORD', env('DB_PASSWORD', '')),
+        ];
+    }
+}
+
 return [
 
     /*
@@ -29,7 +75,7 @@ return [
     |
     */
 
-    'connections' => [
+    'connections' => array_merge([
 
         'sqlite' => [
             'driver' => 'sqlite',
@@ -114,6 +160,7 @@ return [
         ],
 
     ],
+    $shardConnections),
 
     /*
     |--------------------------------------------------------------------------
@@ -130,6 +177,9 @@ return [
         'table' => 'migrations',
         'update_date_on_publish' => true,
     ],
+
+    'shard_count' => $shardCount,
+    'shard_driver' => $shardDriver,
 
     /*
     |--------------------------------------------------------------------------

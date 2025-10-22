@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Traits\Sharded;
 
 class Beach extends Model
 {
+    use Sharded;
     protected $fillable = [
         'city',
         'state',

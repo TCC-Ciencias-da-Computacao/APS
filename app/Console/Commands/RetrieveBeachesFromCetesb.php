@@ -25,7 +25,15 @@ class RetrieveBeachesFromCetesb extends Command
             $latitude = $beach['geometry']['y'];
             $longitude = $beach['geometry']['x'];
 
-            Beach::updateOrCreate(
+            // Decide shard based on beach code (id_praia) and perform operation on that connection
+            if (empty($attributes['id_praia'])) {
+                $this->warn('Praia pulada: id_praia ausente');
+                dd('SEM ID_PRAIA');
+            }
+            $shardKey = $attributes['id_praia'];
+            $connection = \App\Services\ShardManager::connectionFor($shardKey);
+
+            Beach::on($connection)->updateOrCreate(
                 ['code' => $attributes['id_praia']],
                 [
                     'city' => mb_strtolower($attributes['municipio']),
